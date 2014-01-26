@@ -5,7 +5,7 @@
 Calculates the CA rmsd between two PDB structures, and generates the
 optimal superposition between them
 
-Installation:
+## Installation
 
     pip install rmsdpdb
 
@@ -13,7 +13,7 @@ The only dependency is `numpy`, which should be installed by pip.
 Specifically, the RMSD calculation leverages the SVD decomposition available 
 in the `numpy` package.
 
-Usage: 
+## Usage
 
     rmsdpdb -o transform_pdb1 pdb1 pdb2 [segments1] [segments2]
 
@@ -27,7 +27,7 @@ Usage:
 - segments2: string encoding residues from pdb2, if not given,
            assumed to be same as segments1
 
-The format of the segments string: 
+## Format of the segments
 
   - e.g. "A:5-A:10 B:3-B:19" gives two discrete segments on
     chain A and on chain B, there are no spaces between the '-' characters
