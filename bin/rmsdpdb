@@ -1,0 +1,161 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import getopt
+import math
+
+import rmsdpdb.molecule as molecule
+import rmsdpdb.polymer as polymer
+import rmsdpdb.v3 as v3
+
+fname = os.path.basename(__file__)
+usage = """
+
+%s - calculates the CA rmsd between 2 PDB structures
+& generates the optimal superposition between them.
+(c) 2014, 2007 Bosco Ho
+
+Usage: 
+
+  %s [-o transform_pdb1] pdb1 pdb2 [segments1] [segments2]
+
+transform_pdb1: PDB with the optimal superposition of pdb1 to pdb2,
+                if not selected, optimal rotation will not
+                be calculated
+
+segments1: string that encodes the residues to be matched from pdb1,
+           if none given, all residues are considered
+
+segments2: string encoding residues from pdb2, if not given,
+           assumed to be same as segments1
+
+format of the segments string: 
+  - e.g. "A:5-A:10 B:3-B:19" gives two discrete segments on
+    chain A and on chain B, there are no spaces between the '-' characters
+  - the ":" character is optional if there are no chain identifiers
+  - insertions at the end of the residue tag "A:335E"
+
+""" % (fname, fname)
+
+
+def get_tag(residue):
+  tag = ""
+  if residue.chain_id != " " and residue.chain_id != "":
+    tag += residue.chain_id + ":"
+  tag += str(residue.num)
+  if residue.insert:
+    tag += residue.insert
+  return tag  
+
+
+def get_i_residue(residues, tag):
+  # clean up tag
+  tag = tag.strip()
+  if tag[0] == ":":
+    tag = tag[1:]
+  if not tag[0].isdigit() and tag[1].isdigit():
+    tag = tag[0] + ":" + tag[1:]
+
+  for i, residue in enumerate(residues):
+    if tag.lower() == get_tag(residue).lower():
+      return i
+  raise "Can't find residue", tag
+  
+  
+def get_superposable_atoms(polymer, segments, 
+           atom_types=['CA', 'N', 'C', 'CB']):
+  result = []
+  allowed_i = []
+  residues = polymer.residues()
+  if segments:
+    for res_tag_i, res_tag_j in segments:
+      i = get_i_residue(residues, str(res_tag_i))
+      j = get_i_residue(residues, str(res_tag_j))
+      allowed_i.extend(range(i,j))
+  else:
+    allowed_i = range(len(residues))
+  for i, residue in enumerate(residues):
+    if i in allowed_i:
+      result.extend([a for a in residue.atoms()
+                     if a.type in atom_types])
+  return result
+
+
+def segments_str(segments, atom_types):
+  if not segments:
+    s = 'all residues containing'
+  else:
+    pairs = []
+    for i, j in segments:
+      if i == j:
+        pairs.append(str(i))
+      else:
+        pairs.append("%s-%s" % (i,j))
+    s = 'residues ' + ', '.join(pairs)
+  return '%s containing %s atoms' % (s, ','.join(atom_types))
+  
+
+if __name__ == '__main__':
+
+  opts, args = getopt.getopt(sys.argv[1:], "o:")
+  opt_dict = dict(opts)
+  if len(args) < 2:
+    print usage 
+    sys.exit(0)
+
+  transform_pdb1 = None
+  if '-o' in opt_dict:
+    transform_pdb1 = opt_dict['-o']
+
+  pdb1 = args[0]
+  pdb2 = args[1]
+
+  atom_types = ['CA']
+
+  segments1 = []
+  segments2 = []
+  if len(args) > 2:
+    for segment_str in args[2].split():
+      segments1.append(segment_str.split('-'))
+  if len(args) == 3:
+    segments2 = segments1
+  elif len(args) == 4:
+    for segment_str in args[3].split():
+      segments2.append(segment_str.split('-'))
+
+  print "%s: %s" % (pdb1, segments_str(segments1, atom_types))
+  print "%s: %s" % (pdb2, segments_str(segments2, atom_types))
+  if transform_pdb1:
+    print "Superposition %s->%s: %s" % (pdb1, pdb2, transform_pdb1)
+
+  polymer1 = polymer.Polymer(pdb1)
+  polymer2 = polymer.Polymer(pdb2)
+
+  atoms1 = get_superposable_atoms(polymer1, segments1, atom_types)
+  atoms2 = get_superposable_atoms(polymer2, segments2, atom_types)
+
+  center1 = molecule.get_center(atoms1)
+  center2 = molecule.get_center(atoms2)
+
+  polymer1.transform(v3.translation(-center1))
+  polymer2.transform(v3.translation(-center2))
+
+  crds1 = [a.pos for a in atoms1]
+  crds2 = [a.pos for a in atoms2]
+
+  if not transform_pdb1:
+    rmsd = v3.rmsd(crds1, crds2)
+  else:
+    transform_1_to_2 = v3.superposition(crds1, crds2)
+    polymer1.transform(transform_1_to_2)
+
+    polymer1.transform(v3.translation(center2))
+    polymer2.transform(v3.translation(center2))
+
+    polymer1.write_pdb(transform_pdb1)
+    rmsd = v3.sum_rmsd(crds1, crds2)
+
+  print "RMSD: %.3f" % rmsd
+
+
