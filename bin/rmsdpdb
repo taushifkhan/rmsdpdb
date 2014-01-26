@@ -12,7 +12,7 @@ import rmsdpdb.v3 as v3
 fname = os.path.basename(__file__)
 usage = """
 
-%s - calculates the CA rmsd between 2 PDB structures
+%s - calculates the RMSD of the CA atoms between 2 PDB structures
 & generates the optimal superposition between them.
 (c) 2014, 2007 Bosco Ho
 

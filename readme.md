@@ -2,8 +2,8 @@
 
 # rmsdpdb
 
-Calculates the CA rmsd between two PDB structures, and generates the
-optimal superposition between them
+Calculates the RMSD of the CA atoms between two PDB structures, and generates the
+optimal superposition between them.
 
 ## Installation
 
