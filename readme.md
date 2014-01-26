@@ -9,7 +9,9 @@ Installation:
 
     pip install rmsdpdb
 
-`rmsdpdb` depends on `numpy` that should be installed by pip
+The only dependency is `numpy`, which should be installed by pip. 
+Specifically, the RMSD calculation leverages the SVD decomposition available 
+in the `numpy` package.
 
 Usage: 
 
@@ -32,7 +34,5 @@ The format of the segments string:
   - the ":" character is optional if there are no chain identifiers
   - insertions at the end of the residue tag "A:335E"
 
-The RMSD calculation leverages the SVD decomposition available in the 
-`numpy` package.
 
 Copyright (c) 2010, 2007 Bosco Ho
